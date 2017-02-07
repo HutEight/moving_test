@@ -40,32 +40,35 @@ int main(int argc, char **argv) {
 	default_position.positions[11] = 0.0721441;
 	default_position.positions[12] = -0.0711621;
 	default_position.positions[13] = -0.163507;
-	default_position.time_from_start = ros::Duration(0.0);
+	default_position.time_from_start = ros::Duration(5.0);
 
 	track.points.push_back(default_position);
 
 	trajectory_msgs::JointTrajectoryPoint temp;
 	temp.positions.resize(14);
 
-	double wait_time = 2.0;
+	double wait_time = 10.0;
+
+
+	temp.positions[0] = default_position.positions[0];
+	temp.positions[1] = default_position.positions[1];
+	temp.positions[2] = default_position.positions[2];
+	temp.positions[3] = default_position.positions[3];
+	temp.positions[4] = default_position.positions[4];
+	temp.positions[5] = default_position.positions[5];
+	temp.positions[6] = default_position.positions[6];
+	temp.positions[7] = default_position.positions[7];
+	temp.positions[8] = default_position.positions[8];
+	temp.positions[9] = default_position.positions[9];
+	temp.positions[10] = default_position.positions[10];
+	temp.positions[11] = default_position.positions[11];
+	temp.positions[12] = default_position.positions[12];
+	temp.positions[13] = default_position.positions[13];
+
 
 	for (int i=0; i<20; i++){
-	  temp.positions[0] = default_position.positions[0];
-	  temp.positions[1] = default_position.positions[1];
-	  temp.positions[2] = default_position.positions[2] + (i+1)*0.2;
-	  temp.positions[3] = default_position.positions[3];
-	  temp.positions[4] = default_position.positions[4];
-	  temp.positions[5] = default_position.positions[5];
-	  temp.positions[6] = default_position.positions[6];
-	  temp.positions[7] = default_position.positions[7];
-	  temp.positions[8] = default_position.positions[8];
-	  temp.positions[9] = default_position.positions[9];
-	  temp.positions[10] = default_position.positions[10];
-	  temp.positions[11] = default_position.positions[11];
-	  temp.positions[12] = default_position.positions[12];
-	  temp.positions[13] = default_position.positions[13];
 
-
+	  temp.positions[2] -= 0.02;
 	  temp.time_from_start = ros::Duration( 2.0+ i*2.0);
 
 	  track.points.push_back(temp);
@@ -84,7 +87,7 @@ int main(int argc, char **argv) {
 	//Locate and lock the action server
 	actionlib::SimpleActionClient<
 	  cwru_davinci_traj_streamer::trajAction
-	> action_client("davinci_gazebo", true);
+	> action_client("trajActionServer", true);
 	bool server_exists = action_client.waitForServer(ros::Duration(5.0));
 	// something odd in above: does not seem to wait for 5 seconds, but returns rapidly if server not running
 	ROS_INFO("Waiting for server: ");
