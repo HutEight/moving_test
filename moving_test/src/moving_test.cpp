@@ -12,6 +12,23 @@
 //   //really could do something interesting here with the received data...but all we do is print it
 // }
 
+bool g_server_goal_completed= false;
+
+void doneCb(const actionlib::SimpleClientGoalState& state,
+        const cwru_davinci_traj_streamer::trajResultConstPtr& result) {
+    ROS_INFO(" doneCb: server responded with state [%s]", state.toString().c_str());
+    ROS_INFO("got return val = %d; traj_id = %d",result->return_val,result->traj_id);
+    g_server_goal_completed = true;
+}
+
+double weight_data;
+
+void scalerCallback(const std_msgs::Float64& weight)
+{
+  ROS_INFO("received value is: %f",weight.data);
+
+  weight_data = weight.data;
+}
 
 int main(int argc, char **argv) {
 	//Set up our node.
@@ -43,44 +60,24 @@ int main(int argc, char **argv) {
 	default_position.time_from_start = ros::Duration(5.0);
 
 	track.points.push_back(default_position);
-
-	trajectory_msgs::JointTrajectoryPoint temp;
-	temp.positions.resize(14);
-
-	double wait_time = 10.0;
+	cwru_davinci_traj_streamer::trajGoal tstart;
+	tstart.trajectory = track;
 
 
-	temp.positions[0] = default_position.positions[0];
-	temp.positions[1] = default_position.positions[1];
-	temp.positions[2] = default_position.positions[2];
-	temp.positions[3] = default_position.positions[3];
-	temp.positions[4] = default_position.positions[4];
-	temp.positions[5] = default_position.positions[5];
-	temp.positions[6] = default_position.positions[6];
-	temp.positions[7] = default_position.positions[7];
-	temp.positions[8] = default_position.positions[8];
-	temp.positions[9] = default_position.positions[9];
-	temp.positions[10] = default_position.positions[10];
-	temp.positions[11] = default_position.positions[11];
-	temp.positions[12] = default_position.positions[12];
-	temp.positions[13] = default_position.positions[13];
 
+	double wait_time_1 = 5.0;
+  double wait_time_2 = 5.0;
+	ros::Rate naptime(2.0);
 
-	for (int i=0; i<20; i++){
-
-	  temp.positions[2] -= 0.02;
-	  temp.time_from_start = ros::Duration( 2.0+ i*2.0);
-
-	  track.points.push_back(temp);
-		wait_time += 2.0;
-	}
 
 	// ros::Subscriber scaler_sub= nh.subscribe("scaler", 1, scalerCallback);
 	track.header.stamp = ros::Time::now();
 
 	//Add an ID.
 	cwru_davinci_traj_streamer::trajGoal tgoal;
+	track.points.push_back(default_position);
 	tgoal.trajectory = track;
+
 	srand(time(NULL));
 	tgoal.traj_id = rand();
 
@@ -99,12 +96,33 @@ int main(int argc, char **argv) {
 
 	//Send our message:
 	ROS_INFO("Sending trajectory with ID %u", tgoal.traj_id);
-	action_client.sendGoal(tgoal);
 
-	//action_client.getState();
+	ros::Subscriber scaler_sub= nh.subscribe("scale", 1, scalerCallback);
+  //ROS_INFO("%f",weight.data);
+	while (weight_data <= 1.0){
 
+		g_server_goal_completed= false;
+		action_client.sendGoal(tgoal,&doneCb);
+
+		while(!g_server_goal_completed){
+			doneCb;
+			naptime.sleep();
+		}
+		tgoal.trajectory.points[0].positions[2] -= 0.01;
+    tgoal.trajectory.points[1].positions[2] -= 0.01;
+    wait_time_1 = wait_time_2 + 1.0;
+		wait_time_2 += 5.0;
+		tgoal.trajectory.points[0].time_from_start = ros::Duration(wait_time_1);
+    tgoal.trajectory.points[1].time_from_start = ros::Duration(wait_time_2);
+    tstart.trajectory.points[0].time_from_start = ros::Duration(wait_time_2+2.0);
+		tgoal.traj_id = rand();
+		//ros::Subscriber scaler_sub= nh.subscribe("scale", 1, scalerCallback);
+    ROS_INFO("%f",weight_data);
+    ros::spinOnce();
+	}
+  action_client.sendGoal(tstart,&doneCb);
 	//Wait for it to finish.
-	while(!action_client.waitForResult(ros::Duration(wait_time + 2.0)) && ros::ok()){
+	while(!action_client.waitForResult(ros::Duration(wait_time_2 + 4.0)) && ros::ok()){
 	  ROS_WARN("CLIENT TIMED OUT- LET'S TRY AGAIN...");
 	  //Could add logic here to resend the request or take other actions if we conclude that
 	  //the original is NOT going to get served.
