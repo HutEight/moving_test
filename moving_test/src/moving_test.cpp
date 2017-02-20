@@ -21,7 +21,7 @@ void doneCb(const actionlib::SimpleClientGoalState& state,
     g_server_goal_completed = true;
 }
 
-double weight_data;
+double weight_data = 0.0;
 
 void scalerCallback(const std_msgs::Float64& weight)
 {
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 
 
 	double wait_time_1 = 5.0;
-  double wait_time_2 = 5.0;
+  // double wait_time_2 = 5.0;
 	ros::Rate naptime(2.0);
 
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	//Add an ID.
 	cwru_davinci_traj_streamer::trajGoal tgoal;
-	track.points.push_back(default_position);
+	// track.points.push_back(default_position);
 	tgoal.trajectory = track;
 
 	srand(time(NULL));
@@ -106,23 +106,25 @@ int main(int argc, char **argv) {
 
 		while(!g_server_goal_completed){
 			doneCb;
-			naptime.sleep();
+			ros::Duration(2).sleep();
+      ROS_INFO("STILL MOVING");
+      // wait_time_1 += 2.0;
 		}
+    ROS_INFO("Taking a picture");
+    ros::Duration(5).sleep();
+    ROS_INFO("Picture taken");
 		tgoal.trajectory.points[0].positions[2] -= 0.01;
-    tgoal.trajectory.points[1].positions[2] -= 0.01;
-    wait_time_1 = wait_time_2 + 1.0;
-		wait_time_2 += 5.0;
+
 		tgoal.trajectory.points[0].time_from_start = ros::Duration(wait_time_1);
-    tgoal.trajectory.points[1].time_from_start = ros::Duration(wait_time_2);
-    tstart.trajectory.points[0].time_from_start = ros::Duration(wait_time_2+2.0);
+    tstart.trajectory.points[0].time_from_start = ros::Duration(wait_time_1+2.0);
 		tgoal.traj_id = rand();
-		//ros::Subscriber scaler_sub= nh.subscribe("scale", 1, scalerCallback);
+		ros::Subscriber scaler_sub= nh.subscribe("scale", 1, scalerCallback);
     ROS_INFO("%f",weight_data);
     ros::spinOnce();
 	}
   action_client.sendGoal(tstart,&doneCb);
 	//Wait for it to finish.
-	while(!action_client.waitForResult(ros::Duration(wait_time_2 + 4.0)) && ros::ok()){
+	while(!action_client.waitForResult(ros::Duration(wait_time_1 + 4.0)) && ros::ok()){
 	  ROS_WARN("CLIENT TIMED OUT- LET'S TRY AGAIN...");
 	  //Could add logic here to resend the request or take other actions if we conclude that
 	  //the original is NOT going to get served.
